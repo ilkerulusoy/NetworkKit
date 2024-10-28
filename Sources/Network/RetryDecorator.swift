@@ -20,14 +20,12 @@ class RetryDecorator: NetworkRequestable {
                                headers: [String: String] = [:]) async throws -> T {
         var lastError: Error?
         
-        for attempt in 1... {
-            do {
-                return try await wrapped.request(endpoint, method: method, body: body, responseType: responseType, headers: headers)
-            } catch {
-                lastError = error
-                print("Request failed (attempt \(attempt)): \(error.localizedDescription)")
-                try await Task.sleep(nanoseconds: UInt64(pow(2.0, Double(attempt))) * 1_000_000_000)
-            }
+        do {
+            return try await wrapped.request(endpoint, method: method, body: body, responseType: responseType, headers: headers)
+        } catch {
+            lastError = error
+            try await Task.sleep(nanoseconds: 1_000_000_000)
+            return try await wrapped.request(endpoint, method: method, body: body, responseType: responseType, headers: headers)
         }
         
         throw lastError ?? NetworkError.custom("Retry failed")
